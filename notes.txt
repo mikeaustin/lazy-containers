@@ -1,0 +1,340 @@
+#include <iostream>
+#include <typeinfo>
+
+using namespace std;
+
+#include "tuple.h"
+#include "vector.h"
+
+template<typename R, typename... Args>
+vector<R> zip(function<R (Args...)> func)
+{
+    return make_vector(func());
+}
+
+template<typename R, typename... Args>
+vector<R> zip(R (*func)(Args...))
+{
+    return zip(function<R (Args...)>(func));
+}
+
+//template<typename F, typename R = decltype(&F::operator()), typename... Args>
+template<typename Function, typename... Args, typename Return = typename result_of<Function (Args...)>::type>
+vector<Return> zip(Function func)
+{
+    return zip(function<Return (Args...)>(func));
+}
+
+
+template <typename Function, typename... Args, typename Return = typename result_of<Function& (Args...)>::type>
+std::vector<Return> select(Function func, const vector<Return>& c)
+{
+    std::vector<Return> v;
+//    std::transform(std::begin(c), std::end(c), std::back_inserter(v), f);
+    return v;
+}
+
+//template<typename Function, typename... Args>
+//auto map(Function func, const vector<int>& source) -> vector<decltype(func(Args()...))>
+//template<typename Function, typename... Args, typename Return = typename result_of<Function (int)>::type>
+// template<typename Function, typename... Args, typename Return = typename result_of<Function& (Args...)>::type>
+// vector<Return> map(Function func, const Args&... source)
+// {
+//     //vector<int> vector(source.size());
+
+//     for (auto iter = begin(source); iter != end(source); ++iter)
+//     {
+// //        vector[i] = func(*iter);
+//     }
+
+//     return vector;
+// }
+
+template<typename R, typename T, typename... Ts>
+vector<R> zip_with2(function<R (T, Ts...)> func, const vector<T>& first, const vector<Ts>&... rest)
+{
+}
+
+template<typename Iterator>
+struct iter_range {
+    iter_range(Iterator begin, Iterator end) : _begin(begin), _end(end) { }
+
+    Iterator _begin;
+    Iterator _end;
+};
+
+template<typename Iterator>
+iter_range<Iterator> make_iter_range(Iterator begin, Iterator end) {
+    return iter_range<Iterator>(begin, end);
+}
+
+template<typename... Containers>
+auto make_iter_range(Containers&... containers) -> decltype(make_tuple(make_iter_range(containers.begin()..., containers.end()...)))
+{
+    return make_tuple(make_iter_range(containers.begin()..., containers.end()...));
+}
+
+template<typename... Ts>
+struct zip_with {
+
+    tuple<Ts...> objects;
+    tuple<typename Ts::iterator...> iters;
+
+    zip_with(Ts... args) : objects(args...), iters(foo(args..., make_index_sequence<sizeof...(Ts)>())) { }
+
+    // template<int Index, typename V = void>
+    // struct increment {
+    //     void operator ()(tuple<typename Ts::iterator...> iters) {
+    //        ++get<Index>(iters);
+
+    //        increment<Index - 1>()();
+    //     }
+    // };
+
+    // template<typename V>
+    // struct increment<0, V> {
+    //     void operator ()(tuple<typename Ts::iterator...> iters) {
+    //         ++get<0>(iters);
+    //     }
+    // };
+
+    template<size_t... Is>
+    void increment2(tuple<typename Ts::iterator...> iters, index_sequence<Is...>) {
+        make_tuple(++get<Is>(iters)...);
+    }
+
+    template<size_t... Is>
+    tuple<typename Ts::iterator...> foo(tuple<Ts...> objects, index_sequence<Is...>) {
+        return make_tuple(get<Is>(objects).begin()...);
+    }
+
+    template<typename Selector>
+    vector<int> operator ()(Selector selector) {
+        vector<int> vector;
+
+        auto seq = make_index_sequence<sizeof...(Ts)>();
+
+        tuple<typename Ts::iterator...> iters = foo(objects, seq);
+
+        increment2(iters, seq);
+
+        //selector(args...);
+
+        return vector;
+    }
+
+};
+
+
+template<int Index, typename F, typename Tuple>
+struct each_ {
+    void operator()(F f, const Tuple& t) {
+        each_<Index - 1, F, Tuple>()(f, t);
+
+        f(std::get<Index>(t));
+    }
+};
+
+template<typename F, typename Tuple>
+struct each_<0, F, Tuple> {
+    void operator()(F f, const Tuple& t) {
+        f(std::get<0>(t));
+    }
+};
+
+template<typename F, typename Tuple>
+void each(F f, const Tuple& t) {
+    each_<tuple_size<Tuple>::value - 1, F, Tuple>()(f, t);
+}
+
+
+int main(int argc, char* argv[])
+{
+    cout << make_vector(make_tuple(1, 2, 3)) << endl;
+
+    zip([]() { cout << "here" << endl; return 0; });
+
+    select([](int) { return 0; }, vector<int>());
+
+    //map([](int i) { cout << "here" << endl; return 0; }, make_vector(1, 2, 3));
+
+    //zip_with([](int i) { return i; }, make_vector(1, 2, 3));
+
+    zip_with<vector<int>>(vector<int>())([](int i) { return i; });
+
+    each([](int i) { cout << i << endl; }, make_tuple(1, 2));
+
+    return 0;
+}
+
+
+
+#include <iostream>
+#include <typeinfo>
+
+using namespace std;
+
+#include "tuple.h"
+#include "vector.h"
+
+template<typename R, typename... Args>
+vector<R> zip(function<R (Args...)> func)
+{
+    return make_vector(func());
+}
+
+template<typename R, typename... Args>
+vector<R> zip(R (*func)(Args...))
+{
+    return zip(function<R (Args...)>(func));
+}
+
+//template<typename F, typename R = decltype(&F::operator()), typename... Args>
+template<typename Function, typename... Args, typename Return = typename result_of<Function (Args...)>::type>
+vector<Return> zip(Function func)
+{
+    return zip(function<Return (Args...)>(func));
+}
+
+
+template <typename Function, typename... Args, typename Return = typename result_of<Function& (Args...)>::type>
+std::vector<Return> select(Function func, const vector<Return>& c)
+{
+    std::vector<Return> v;
+//    std::transform(std::begin(c), std::end(c), std::back_inserter(v), f);
+    return v;
+}
+
+//template<typename Function, typename... Args>
+//auto map(Function func, const vector<int>& source) -> vector<decltype(func(Args()...))>
+//template<typename Function, typename... Args, typename Return = typename result_of<Function (int)>::type>
+// template<typename Function, typename... Args, typename Return = typename result_of<Function& (Args...)>::type>
+// vector<Return> map(Function func, const Args&... source)
+// {
+//     //vector<int> vector(source.size());
+
+//     for (auto iter = begin(source); iter != end(source); ++iter)
+//     {
+// //        vector[i] = func(*iter);
+//     }
+
+//     return vector;
+// }
+
+template<typename R, typename T, typename... Ts>
+vector<R> zip_with2(function<R (T, Ts...)> func, const vector<T>& first, const vector<Ts>&... rest)
+{
+}
+
+template<typename Iterator>
+struct iter_range {
+    iter_range(Iterator begin, Iterator end) : _begin(begin), _end(end) { }
+
+    Iterator _begin;
+    Iterator _end;
+};
+
+template<typename Iterator>
+iter_range<Iterator> make_iter_range(Iterator begin, Iterator end) {
+    return iter_range<Iterator>(begin, end);
+}
+
+template<typename... Containers>
+auto make_iter_range(Containers&... containers) -> decltype(make_tuple(make_iter_range(containers.begin()..., containers.end()...)))
+{
+    return make_tuple(make_iter_range(containers.begin()..., containers.end()...));
+}
+
+
+template<typename... Objects>
+struct zip_with_ : public tuple<Objects...> {
+
+    zip_with_(Objects... objects) : tuple<Objects...>(objects...) { }
+
+    template<size_t... Indexes>
+    tuple<typename Objects::iterator...> iterators(index_sequence<Indexes...>)
+    {
+        return make_tuple(get<Indexes>(*this).begin()...);
+    }
+
+    template<size_t... Indexes>
+    void increment(tuple<typename Objects::iterator...>& iters, index_sequence<Indexes...>)
+    {
+        make_tuple(++get<Indexes>(iters)...);
+    }
+
+    template<typename Function, typename Iters, size_t... Indexes, typename R = typename result_of<Function(typename Objects::value_type...)>::type>
+    R apply(Function function, Iters& iters, index_sequence<Indexes...>)
+    {
+        return function(*get<Indexes>(iters)...);
+    }
+
+    template<typename Selector, template<typename ...> class Container = vector, typename Return = typename result_of<Selector(typename Objects::value_type...)>::type>
+    //template<typename Selector, typename Return = typename result_of<Selector(typename Objects::value_type...)>::type>
+    Container<Return> operator ()(Selector selector)
+    {
+        Container<Return> container;
+
+        auto sequence = make_index_sequence<sizeof...(Objects)>();
+        auto iters = iterators(sequence);
+
+        while (get<0>(iters) != end(get<0>(*this)))
+        {
+            container.emplace_back(apply(selector, iters, sequence));
+
+            increment(iters, sequence);
+        }
+
+        return container;
+    }
+
+};
+
+// template<typename... Objects, typename Return = typename result_of<Selector(typename Objects::value_type...)>::type>
+// zip_with_<vector<Return>> zip_with(Objects... objects) {
+//     return zip_with_<vector<Return>>(objects...);
+// }
+
+
+template<int Index, typename F, typename Tuple>
+struct each_ {
+    void operator()(F f, const Tuple& t) {
+        each_<Index - 1, F, Tuple>()(f, t);
+
+        f(std::get<Index>(t));
+    }
+};
+
+template<typename F, typename Tuple>
+struct each_<0, F, Tuple> {
+    void operator()(F f, const Tuple& t) {
+        f(std::get<0>(t));
+    }
+};
+
+template<typename F, typename Tuple>
+void each(F f, const Tuple& t) {
+    each_<tuple_size<Tuple>::value - 1, F, Tuple>()(f, t);
+}
+
+
+int main(int argc, char* argv[])
+{
+    cout << make_vector(make_tuple(1, 2, 3)) << endl;
+
+    zip([]() { cout << "here" << endl; return 0; });
+
+    select([](int) { return 0; }, vector<int>());
+
+    //map([](int i) { cout << "here" << endl; return 0; }, make_vector(1, 2, 3));
+
+    //zip_with([](int i) { return i; }, make_vector(1, 2, 3));
+
+    cout << endl << "zip_with" << endl;
+    cout << zip_with_<vector<int>, vector<char>>(make_vector(1, 2, 3), make_vector('a', 'b', 'c')) ([](int i, char c) { return i + c; }) << endl;
+
+    cout << endl << "each" << endl;
+    each([](int i) { cout << i << endl; }, make_tuple(1, 2));
+
+    return 0;
+}
